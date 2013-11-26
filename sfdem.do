@@ -1,5 +1,5 @@
-*clear 
-*use M:\IPUMS\usa_00002.dta
+clear 
+use M:\IPUMS\usa_00002.dta
 
 /*This program runs analyses on IPUMS ACS data from 2007-onward with the following
 questions in mind: 
@@ -44,6 +44,12 @@ label define sfowned 1 "Single family owned housing unit" 0 "Other"
 by metaread year, sort: egen sfowned_total = sum(sfowned)
 by metaread year, sort: egen sfrental_total = sum(sfrental) 
 by metaread year, sort: egen sf_total = sum(singlefamhouse)
+
+preserve 
+
+*Table: number of SF family homes (owned, rented, and total) by year 
+
+
 
 
 *Identify financial characteristics 
