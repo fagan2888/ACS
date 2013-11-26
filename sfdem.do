@@ -13,6 +13,12 @@ Q2: Look at SF renters who moved WITHIN county.
 	- Do their income/hhld size/etc look unusual? 
 	- How do they differ from rest of populaton (in terms of financial/ demographics)?
 	- How does their new housing unit/ hh structure differ? 
+
+Note: remember that these are household- AND person-level variables	
+	- The combo of YEAR, DATANUM, SERIAL, and PERNUM identifies unique persons
+	- The combo of YEAR, DATANUM, and SERIAL identifies unique households 
+	- Since DATANUM = 1 for all years in this survey, no need to include in either identifier.
+	
 */
 
 ********
@@ -42,13 +48,22 @@ label define sfowned 1 "Single family owned housing unit" 0 "Other"
 
 *Calculate total number of SF homes, owned and rented, by MSA and year
 by metaread year, sort: egen sfowned_total = sum(sfowned)
+label var sfowned_total "Total owner-occupied single family homes"
 by metaread year, sort: egen sfrental_total = sum(sfrental) 
+label var sfrental_total "Total renter-occupied single family homes"
 by metaread year, sort: egen sf_total = sum(singlefamhouse)
+label var sf_total "Total single family homes"
+
+*Table 1: number of SF family homes (owned, rented, and total) by year and MSA
+gen unique_hhid = string(year) + "-" + string(serial)	
+label var unique_hhid "Unique household ID" 
+gen unique_personid = string(year) + "-" + string(serial) + "-" + string(pernum) 
+label var unique_personid = "Unique person ID" 
 
 preserve 
 
-*Table: number of SF family homes (owned, rented, and total) by year 
-
+duplicates drop metaread year
+keep sfowned_total sfrental_total sf_total year metarea* 	
 
 
 
