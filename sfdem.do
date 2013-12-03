@@ -46,13 +46,13 @@ gen sfrental = (singlefamhouse & renthouse)
 label var sfrental "Respondent lives in single family rental housing unit" 
 label define sfrental 1 "Single family housing unit" 0 "Other" 
 
-gen sfowned = (singlefamhouse & !renthouse)
+gen sfowned = (singlefamhouse  owner-& !renthouse)
 label var sfowned "Respondent lives in single family owned housing unit" 
 label define sfowned 1 "Single family owned housing unit" 0 "Other" 
 
 *Calculate total number of SF homes, owned and rented, by MSA and year
 by metaread year, sort: egen sfowned_total = sum(sfowned)
-label var sfowned_total "Total owner-occupied single family homes"
+label var sfowned_total "Totaloccupied single family homes"
 by metaread year, sort: egen sfrental_total = sum(sfrental) 
 label var sfrental_total "Total renter-occupied single family homes"
 by metaread year, sort: egen sf_total = sum(singlefamhouse)
@@ -64,15 +64,9 @@ keep sfowned_total sfrental_total sf_total year metarea*
 outsheet using sf_by_msa.csv, comma replace
 *The code to create this is found in change_across_msa.py
 *Resulting data in sf_by_msa.csv
-*/
 
 insheet using "M:\IPUMS\sf_by_year.csv", names clear 
-
 *Calculate shifts in owner-/renter-occupied/total SF across time
-*gen pshift_own =  100*(sfowned_total_2011 - sfowned_total_2009)/(sfowned_total_2009)
-*gen pshift_rent = 100*(sfrental_total_2011 - sfrental_total_2009)/(sfrental_total_2009)
-*gen pshift_total = 100*(sf_total_2011 - sf_total_2009)/(sf_total_2009)
-
 forvalues y = 2007(1)2011 {
 	gen rental_share_`y' = 100*sfrental_total_`y'/sf_total_`y' 
 	gen owner_share_`y' = 100*sfowned_total_`y'/sf_total_`y'
@@ -80,12 +74,36 @@ forvalues y = 2007(1)2011 {
 gen pchange_rental_share = 100*(rental_share_2011 - rental_share_2007)/rental_share_2007
 gen pchange_owner_share = 100*(owner_share_2011 - owner_share_2007)/owner_share_2007
 gen pchange_total_sf = 100*(sf_total_2011 - sf_total_2007)/sf_total_2007
-
-*encode msa gen(msa2)
-
-*Place MSAs into bins: what are the MSAs with the greatest shift in SF rentals? 
 /*Export sheets to excel
 export excel using sf_aggregate_ipums, sheet("Overall") sheetreplace firstrow(variables)
 forvalues y = 2007(1)2011 { 
 export excel msa sfowned_total_`y' sfrental_total_`y' sf_total_`y' using sf_aggregate_ipums, sheet("`y'") sheetreplace firstrow(variables)
 }*/
+
+
+*Place MSAs into quantile categories: what are the MSAs with the greatest shift in SF rentals? 
+	*Overall percentile
+	egen n = count(pchange_rental_share)
+	egen i = rank(pchange_rental_share), track
+	gen pctile_pchange_rentshare = 100*(i-1)/(n-1)
+	*Deciles
+	xtile decile_pchange_rentshare = pchange_rental_share, nq(10)
+	*Quintiles 
+	xtile qtile_pchange_rentshare = pchange_rental_share, nq(5)
+	outsheet using "M:\IPUMS\sf_msa_info.csv", comma replace
+	*Attach msa buckets to individual-level data. Code in change_across_msa.py*/
+
+
+*Place MSAs into geographical categories: do housing/unemployment trends differ by region/ climate
+	*Overall percentile
+	by metarea, sort: egen n = count(pchange_rental_share)
+
+
+duplicates drop unique_hhid, force
+
+
+
+
+
+
+
