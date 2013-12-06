@@ -4,9 +4,9 @@ import csv
 This code merges and rearranges microdata from IPUMS into formats appropriate for use by sfdem.do
 """ 
 
-# This function rearranges ACS data on single family homes by year, and outsheets in sf_by_year.csv. 
-# Original data are located in sf_by_msa.csv. 
-def rearrange(csvfile): 
+# This function rearranges rectangular ACS data on single family homes by year, and outsheets in outfile. 
+# Original data are located in csvfile. newvars is a list of relevant variables.
+def rearrange(csvfile, outputfile, newvars): 
 	original = csv.DictReader(open(csvfile, 'r'))
 	d = {} 
 	# Only look at ACS data from 2007-11
@@ -15,26 +15,35 @@ def rearrange(csvfile):
 	msalist = [] 
 	# Organize original file by msa and year
 	for line in original: 
-		msalist.append(line['metaread'])
-		d[(line['metaread'], line['year'])] = line 
-	msalist = list(set(msalist))
-	# Get all years
+		if (line['metaread'], line['year']) not in d:
+			#print (line['metaread'], line['year']) 
+			d[(line['metaread'], line['year'])]	= line
+		if line['metaread'] not in msalist:
+			msalist.append(line['metaread'])
 	fieldnames = ['msa']
 	for year in yearslist: 
-		y = str(year)
-		fieldnames = fieldnames + ['sfowned_total_'+ y, 'sfrental_total_'+ y, 'sf_total_'+y]
+		fieldnames = fieldnames + [var + str(year) for var in newvars]
 	# Look up SF info by msa and year; write to file
-	output = csv.DictWriter(open('sf_by_year.csv', 'w'), lineterminator = '\n', fieldnames = fieldnames)	
+	output = csv.DictWriter(open(outputfile, 'w'), lineterminator = '\n', fieldnames = fieldnames)	
 	output.writerow(dict(zip(fieldnames, fieldnames)))
 	for m in msalist: 
 		temp = {'msa': m}
+		newinfo = {}
 		for year in yearslist:
-			y = str(year)
-			line = d[(m, str(y))]
-			temp.update(dict(zip(['sfowned_total_'+ y, 'sfrental_total_'+ y, 'sf_total_'+y], [line['sfowned_total'], line['sfrental_total'], line['sf_total']])))
-		print temp	
+			line = d[(m, str(year))]
+			newinfo = {var+str(year): line[var] for var in newvars}
+			temp.update(newinfo)	
 		output.writerow(temp)	
-#rearrange("sf_by_msa.csv")
+
+csvfile = "M:/IPUMS/hhlevel_housingstress.csv"
+outputfile = "M:/IPUMS/rearranged_housing_stress.csv"
+newvars = ["num_nonfamhh", "num_hh", "share_nonfamhh", "avg_num_nonrelative", 
+		   "avg_hhsize", "avg_occ_per_room", "avg_num_bedrooms"]		
+rearrange(csvfile, outputfile, newvars)
+	
+
+
+
 
 # This function matches individual-level observations to MSA-level statistics
 # varlist is a list of MSA-level variables 
@@ -56,6 +65,6 @@ def matchMsaInfo(csvfile, varlist, outputfile):
 		msainfo = d[line['metaread']]
 		line.update(msainfo)
 		output.writerow(line)
+#matchMsaInfo("M:\IPUMS\sf_msa_info.csv", ["pctile_pchange_rentshare", "decile_pchange_rentshare", "qtile_pchange_rentshare"], "M:/IPUMS/usa_00002_msainfo.csv")
 
-matchMsaInfo("M:\IPUMS\sf_msa_info.csv", ["pctile_pchange_rentshare", "decile_pchange_rentshare", "qtile_pchange_rentshare"], "M:/IPUMS/usa_00002_msainfo.csv")
-
+# This function rearranges 

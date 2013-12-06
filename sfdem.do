@@ -96,9 +96,9 @@ export excel msa sfowned_total_`y' sfrental_total_`y' sf_total_`y' using sf_aggr
 
 *Place MSAs into geographical categories: do housing/unemployment trends differ by region/ climate
 	*Overall percentile
-	by metarea, sort: egen n = count(pchange_rental_share)
+	*by metarea, sort: egen n = count(pchange_rental_share)
 
-
+*Keep unique hh obs only (i.e. isolate hh level data)
 duplicates drop unique_hhid, force
 
 
