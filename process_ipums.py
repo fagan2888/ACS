@@ -1,7 +1,36 @@
 import csv
 import pandas as pd 
 import numpy as np 
+from functools import partial 
 import matplotlib.pyplot as plt 
+
+
+
+
+# Calculate the weighted avg of a variable within a certain subgroup of a dataframe
+def weightedAvg(group, var):
+#
+	data = group[str(var)]
+	weight = group['hhwt']
+	return weight
+	#return (data*weight).sum()/ weight.sum()
+
+# Get weighted average by MSA in a dataframe, accounting for hh-level weights
+def weightedAvgByMSA(var, df, hhwt):
+	# Group data by msa
+	msagrouped = df.groupby('metaread')
+	# Compute weighted average for each msa in msagrouped
+	msagrouped.apply()
+	#avger = partial(weightedAvg, str(var))
+	#msagrouped.apply(partial(weightedAvg, str(var)))
+
+
+col_indices = [10, 0, 4, 49, 2]
+datafr = pd.read_csv("M:/IPUMS/hhdata/2007.csv", usecols = col_indices, nrows=30)
+datafr = datafr[datafr['related'] == "Head/Householder"]
+weightedAvgByMSA('related', datafr, 'hhwt')	
+
+	
 
 # Split master IPUMS file into separate files by year
 def splitMasterIPUMS(original_csv, years): 
@@ -28,17 +57,12 @@ def selectRelevantVars(varnames, year):
 	datafr = pd.read_csv("M:/IPUMS/hhdata/"+str(year)+".csv", usecols = col_indices)
 	# Keep only hh-level obs
 	datafr = datafr[datafr['related'] == "Head/Householder"]
-	# Write dataframe to csv
+	# Write dataframe to csv file named after year
 	datafr.to_csv("M:/IPUMS/hhdata/relevant_"+str(year)+".csv",
 					header = 'true')
 	# Return dataframe 
 	return datafr
 
-# Aggregate totals of relevant vars by MSA for each year, write to file
-# ***Make sure to account for frequency weights!!***
-def aggregateByMsa(varnames, year):
-
-	return
 
 
 '''
@@ -66,5 +90,4 @@ relevantvars = ['metaread',  # MSA
 				'raced',     # Detailed race
 				'educd',	 # Education
 				'empstatd']  # Employment status
-
-[selectRelevantVars(relevantvars, y) for y in range(2008, 2012)]
+#[selectRelevantVars(relevantvars, y) for y in range(2007, 2012)]
