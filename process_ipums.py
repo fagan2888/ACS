@@ -8,6 +8,46 @@ import matplotlib.pyplot as plt
 
 
 # Calculate the weighted avg of a variable within a certain subgroup of a dataframe
+def wavg(df, var): 
+	weight = df['hhwt']
+	data = df[var]
+	avg = (data*weight).sum()/ weight.sum()
+	df[]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def weightedAvg(group, var):
 #
 	data = group[str(var)]
