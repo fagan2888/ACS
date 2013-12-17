@@ -153,10 +153,8 @@ for  y in range(2007,2012):
 
 	print "Getting msas for each bucket in " + str(y)	
 	# For each bucket, get an empty dict of msas present (to later aggregate relevant vars by msa)
-	print sf_rental
 	sfr_grouped = sf_rental.groupby('metaread')
 	sfr_msas = {x: {} for x in sfr_grouped.groups}
-	print sfr_grouped.groups
 
 	sfo_grouped = sf_owner.groupby('metaread')
 	sfo_msas = {x: {} for x in sfo_grouped.groups}
