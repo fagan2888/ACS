@@ -100,7 +100,6 @@ def selectTenureHhtype(year, renter_status, house_type):
 
 
 
-
 '''
 Implement functions below
 '''
@@ -138,11 +137,12 @@ dummies = ['living_with_other', 'living_alone', 'living_with_fam',
 cts = ['numprec', 'bedrooms', 'rent', 'hhincome', 
 		 'nfams', 'age']
 
+year = 2007
 # Get four dataframes, each containing hh-level obs for sf/mf and rental/owner types
-sf_rental = selectTenureHhtype(2007, 'rented', 'sf')
-mf_rental = selectTenureHhtype(2007, 'rented', 'mf')
-sf_owned = selectTenureHhtype(2007, 'owned', 'sf')
-mf_owned = selectTenureHhtype(2007, 'owned', 'mf')
+sf_rental = selectTenureHhtype(year, 'rented', 'sf')
+mf_rental = selectTenureHhtype(year, 'rented', 'mf')
+sf_owned = selectTenureHhtype(year, 'owned', 'sf')
+mf_owned = selectTenureHhtype(year, 'owned', 'mf')
 	
 # For each of the four of the data frames, compute weighted average of each variable by MSA
 dfs = [sf_rental, mf_rental, sf_owned, mf_owned]
@@ -158,118 +158,22 @@ for df in dfs:
 
 	# Compile the statistics matched to msa in an output dictionary 
 	fieldnames = ['msa'] + [str(year)]	+ ["avg_" + str(v) for v in varlist] 
+	output = []
 	for k in info: 
-		
+		msa = dict(zip(['msa'], [k]))
+		msa.update(info[k])
+		output.append(msa)
 
-
-
+	# Write to a csv file	
 	bname = dfnames[dfs.index(df)]
 	f_out = csv.DictWriter(open('M:/IPUMS/hhdata/'+str(year)+'agg_'+bname+'_'+str(year)+'.csv'), fieldnames = fieldnames, dialect = excel)
 	f_out.writerow(dict(zip(fieldnames, fieldnames)))
+	for l in output: 
+		f_out.writerow(l)
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-'''
-# For each year, generate 4 "buckets" (dataframes) of hh-level obs by ownership status/hhtype 
-for  y in range(2007,2012): 
-	print "Getting ownership status/ hhtype buckets for year " + str(y)
-	
-	sf_rental = selectTenureHhtype(y, 'rented', 'sf')
-	sf_owner = selectTenureHhtype(y, 'owned', 'sf')
-	mf_rental = selectTenureHhtype(y, 'rented', 'mf')
-	mf_owner =  selectTenureHhtype(y, 'owned', 'mf')
-
-	print "Getting msas for each bucket in " + str(y)	
-	# For each bucket, get an empty dict of msas present (to later aggregate relevant vars by msa)
-	sfr_grouped = sf_rental.groupby('metaread')
-	sfr_msas = {x: {} for x in sfr_grouped.groups}
-
-	sfo_grouped = sf_owner.groupby('metaread')
-	sfo_msas = {x: {} for x in sfo_grouped.groups}
-
-	mfr_grouped = mf_rental.groupby('metaread')
-	mfr_msas = {x: {} for x in mfr_grouped.groups}
-
-	mfo_grouped = mf_owner.groupby('metaread')
-	mfo_msas = {x: {} for x in mfo_grouped.groups}
-
-	print "Aggregating vars for each bucket in " + str(y)
-	# For each bucket, aggregate vars by the msas present
-	for v in relevantvars:
-		if v in cts:  
-			print getCtsDict(sfr_msas, sf_rental, v)
-			sfr_msas = sfr_msas.update(getCtsDict(sfr_msas, sf_rental, v))
-			sfo_msas = sfo_msas.update(getCtsDict(sfo_msas, sf_owner, v))
-			mfr_msas = mfr_msas.update(getCtsDict(mfr_msas, mf_rental, v))
-			mfo_msas = mfo_msas.update(getCtsDict(mfo_msas, mf_owner, v))
-		#if v in cts: 
-		#	break 
-		#	sfr_msas = sfr_msas.update(getCtsDict(sfr_msas, sf_rental, v))
-		#	sfo_msas = sfo_msas.update(getCtsDict(sfo_msas, sf_owner, v))
-		#	mfr_msas = mfr_msas.update(getCtsDict(mfr_msas, mf_rental, v))
-		#	mfo_msas = mfo_msas.update(getCtsDict(mfo_msas, mf_owner, v))
-
-	# Get list of all msas present across ALL buckets this given year.
-	all_msas = list(set(sfr_msas.keys() + sfo_msas.keys() + mfr_msas.keys() + mfo_msas.keys()))
-
-	print "Combining info for all vars across all buckets by msa for " + str(y)
-	# Combine info across buckets for each msa
-	all_info = {x: {} for x in all_msas}
-	for m in all_msas: 
-		master_info = all_info[m]
-		if m in sfr_msas: 
-			sfr_info = sfr_msas[m]
-			for k in sfr_info.keys(): 
-				master_info[k + "_sfr"] = sfr_info[k]
-		if m in sfo_msas: 
-			sfo_info = sfo_msas[m]
-			for k in sfo_info.keys(): 
-				master_info[k + "_sfo"] = sfo_info[k]				
-		if m in mfr_msas: 
-			mfr_info = mfr_msas[m]
-			for k in mfr_info.keys(): 
-				master_info[k + "_mfr"] = mfr_info[k]
-		if m in mfo_msas: 
-			mfo_info = mfo_msas[m]
-			for k in mfo_info.keys(): 
-				master_info[k + "_mfo"] = mfo_info[k]
-
-	print "Writing info to output file for " + str(y)
-	# Now write to csv file T_______T 
-	fieldnames = ['msa'] + [n + "_sfr" for n in relevantvars] + [n + "_sfo" for n in relevantvars] + [n + "_mfr" for n in relevantvars] + [n + "_mfo" for n in relevantvars]
-	output = csv.DictWriter(open("M:/IPUMS/yearly_buckets/buckets_" + str(y) + ".csv", 'w'), fieldnames = fieldnames)
-	output.writerow(dict(zip(fieldnames, fieldnames)))
-	for x in all_info: 
-		msainfo = {'msa': x}
-		otherinfo = all_info[x]
-		msainfo.update(otherinfo)
-		output.writerow(msainfo)
-
-# Run some more calculations in Stata 
-# UGH T___________T
-
-'''
 
 
 '''
