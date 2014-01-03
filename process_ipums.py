@@ -35,6 +35,9 @@ def selectRelevantVars(varnames, year):
 
 # Calculate the hh-weighted avg of a var in hhs within a select msa 
 def wavg(selected_df, var): 
+	# Special allowance for rented types: when calculating average rent, ignore "N/A" values
+	# 999999999999 is the code for "N/A"
+	selected_df = selected_df[selected_df[var] != 999999999999]
 	# Select column containing hh weights 
 	weight = selected_df['hhwt']
 	# Select column containing var of interest
@@ -55,12 +58,14 @@ def wavg_catvar(selected_df, catvar, trueval):
 	avg = truedata.sum()
 
 
-# Calculate hh-weighted avg of a var in a dataframe by msa, return values in a dict by msa
-def getCtsDict(infodict, df, var):
+# Calculate hh-weighted avg of a continuous-valued var in a dataframe by msa, return values in a dict by msa
+# infodict is an empty dict of dicts with msas in dataframe df as keys
+def getCtsDict(infodict, df, varlist):
 	# Compute weighted avg of var for each msa in the dict, place in dict 
 	for m in infodict.keys(): 
-		selected_df = df[df['metaread'] == m]
-		infodict[m].update(dict(zip(["avg_" + str(var)], [wavg(selected_df, var)])))
+		for v in varlist: 
+			selected_df = df[df['metaread'] == m]
+			infodict[m].update(dict(zip(["avg_" + str(v)], [wavg(selected_df, v)])))
 	# Return dict with msas and weighted hh avg
 	return infodict	
 
@@ -83,24 +88,17 @@ def weightedAvgByMSA(year, varlist_of_interest, varlist_of_necessity):
 	# Return dict with weighted avgs sorted by the msas present in year
 	return info
 
-# Given a year, ownership status, and house type, return a dataframe of hh-level obs. 
-def selectTenureHhtype(year, ownership_status, house_type): 
+# Given a year, and hh level obs with dummies, get 4 dataframes of observations. 
+def selectTenureHhtype(year, renter_status, house_type): 
 	# Read the year's relevant vars/hh-level csv into a df. 
-	df = pd.read_csv("M:/IPUMS/hhdata/relevant_"+str(year)+".csv")
+	df = pd.read_csv("M:/IPUMS/hhdata/hhrelevant_"+str(year)+".csv")
 	# Create/return df that meets specified ownership_status and hhtype
-	if ownership_status == 'owned': 
-		df_select = df[df['ownershpd'] == 'Owned or being bought'] 
-		df_select = df_select.append(df[df['ownershpd'] == 'Owned free and clear'])
-		df_select = df_select.append(df[df['ownershpd'] == 'Owned with mortgage or loan'])
-	if ownership_status == 'rented': 
-		df_select = df[df['ownershpd'] == 'Rented']
-		df_select = df_select.append(df[df['ownershpd'] == 'No cash rent'])
-		df_select = df_select.append(df[df['ownershpd'] == 'With cash rent'])
-	if house_type == 'mf': 
-		df_select = df_select[df_select['unitsstr'] != '1-family house, detached']
-	if house_type == 'sf': 
-		df_select = df_select[df_select['unitsstr'] == '1-family house, detached']
-	return df_select	
+	famtype = df[df[house_type] == 1]
+	famtype_ownership = famtype[famtype[renter_status] == 1]
+	# Return dataframe
+	return famtype_ownership 
+
+
 
 
 '''
@@ -113,7 +111,7 @@ relevantvars = ['metaread',  # MSA
 				'related',	 # Relationship to hh head
 				'hhtype',	 # HH type
 				'numprec',   # Num person records following
-				'bedrooms',  # Num bedrooms **subtract 1**
+				'bedrooms',  # Num bedrooms
 				'gq',		 	 # Group quarter status
 				'ownershpd', # Ownership status (tenure)
 				'mortgage',  # Mortgage status
@@ -127,21 +125,72 @@ relevantvars = ['metaread',  # MSA
 				'educd',	 	 # Education
 				'empstatd']  # Employment status
 
-# Categorical vars of interest (take a weighted SUM of dummies)
-categorical = ['gq', 'ownershpd', 'mortgage',
-					'marst', 'raced', 'educd', 'empstatd']
-
-# Cts vars of interest (take a weighted AVG)
-cts = ['numprec', 'bedrooms', 'rent', 'hhincome', 
-		 'nfams', 'unitsstr', 'age',  'year']
-
-# Codes for ownership status and hhtype
-ownership_codes = {'owned': 10, 'rented': 20}
-housetype_codes = {'sf': '1-family house, detached', 'mf': range(4,10)}
-
 # Write relevant vars at hh-level obs from master year files to a seperate file by year
-#[selectRelevantVars(relevantvars, y) for y in range(2007, 2012)]
+#[selectRelevantVars(relevantvars, y) for y in range(2006, 2012)]
 
+# Dummies to be aggregated (weighted average of dummies = share of population)
+dummies = ['living_with_other', 'living_alone', 'living_with_fam',
+			  'owned', 'rented', 'married', 'mortgage_status', 'white', 'black',
+				'nohs', 'hsgrad', 'college', 'postcoll', 'employed', 'not_in_lf', 'sf', 
+				'mf']
+
+# Cts vars to be aggregated (weighted average of cts values = mean value)
+cts = ['numprec', 'bedrooms', 'rent', 'hhincome', 
+		 'nfams', 'age']
+
+# Get four dataframes, each containing hh-level obs for sf/mf and rental/owner types
+sf_rental = selectTenureHhtype(2007, 'rented', 'sf')
+mf_rental = selectTenureHhtype(2007, 'rented', 'mf')
+sf_owned = selectTenureHhtype(2007, 'owned', 'sf')
+mf_owned = selectTenureHhtype(2007, 'owned', 'mf')
+	
+# For each of the four of the data frames, compute weighted average of each variable by MSA
+dfs = [sf_rental, mf_rental, sf_owned, mf_owned]
+dfnames = [1: 'sf_rental', 2: 'mf_rental', 3: 'sf_owned', 4: 'mf_owned'] 
+for df in dfs: 
+	# First get all the MSAs present in the dataframe and initialize an empty dictionary with msas as keys
+	msas = df.groupby('metaread')
+	msadict = {x: {} for x in msa.groups}
+	
+	# For each variable, compute the weighted average by msa and store in a dict with msas as keys
+	varlist = dummies + cts					
+	info = getCtsDict(msadict, df, varlist) 
+
+	# Compile the statistics matched to msa in an output dictionary 
+	fieldnames = ['msa'] + [str(year)]	+ ["avg_" + str(v) for v in varlist] 
+	for k in info: 
+		
+
+
+
+	bname = dfnames[dfs.index(df)]
+	f_out = csv.DictWriter(open('M:/IPUMS/hhdata/'+str(year)+'agg_'+bname+'_'+str(year)+'.csv'), fieldnames = fieldnames, dialect = excel)
+	f_out.writerow(dict(zip(fieldnames, fieldnames)))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
 # For each year, generate 4 "buckets" (dataframes) of hh-level obs by ownership status/hhtype 
 for  y in range(2007,2012): 
 	print "Getting ownership status/ hhtype buckets for year " + str(y)
@@ -218,9 +267,9 @@ for  y in range(2007,2012):
 		output.writerow(msainfo)
 
 # Run some more calculations in Stata 
-# UGH
+# UGH T___________T
 
-
+'''
 
 
 '''
