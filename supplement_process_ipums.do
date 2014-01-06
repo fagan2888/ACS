@@ -1,7 +1,15 @@
 /* This program supplements the python code in M:/IPUMS/hhdata/process_ipums.py */ 
 
-
-* Format selected categorical variables into dummies 
+* Combine aggregated excel sheets by year
+local start = 2007 
+local typelist sf_rental mf_rental mf_owned sf_owned
+foreach n in `typelist' { 
+	forvalues y = `start'(1)2011 {	
+		insheet using "M:/IPUMS/hhdata/`n'`y'.csv", clear
+		export excel using "M:/IPUMS/hhdata/`n'_allyears.xls", sheet("`y'") sheetmodify nolabel firstrow(variables)
+	}
+}
+/* Format selected categorical variables into dummies 
 forvalues y = 2007(1)2011 {
 	insheet using M:/IPUMS/hhdata/relevant_`y'.csv, names clear 
 	
@@ -75,4 +83,4 @@ forvalues y = 2007(1)2011 {
 	
 	* Outsheet
 	outsheet using M:/IPUMS/hhdata/hhrelevant_`y'.csv, comma replace
-	}	
+	}	*/
