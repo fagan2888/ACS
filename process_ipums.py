@@ -47,18 +47,6 @@ def wavg(selected_df, var):
 	avg = (data*weight).sum()/ weight.sum()
 	return avg
 
-# Calculate the hh-weighted avg for a categorical var within a select msa
-def wavg_catvar(selected_df, catvar, trueval): 
-	weight = selected_df['hhwt']
-	#data  = selected_df[catvar]
-	#avg = (data*weight)
-	allweight = selected_df['hhwt']
-#	trueweight = selected_df['hhwt']
-	truedata = selected_df[selected_df[catvar] == trueval]
-	alldata = selected_df[catvar]
-	avg = truedata.sum()
-
-
 # Calculate hh-weighted avg of a continuous-valued var in a dataframe by msa, return values in a dict by msa
 # infodict is an empty dict of dicts with msas in dataframe df as keys
 def getCtsDict(infodict, df, varlist):
@@ -69,12 +57,6 @@ def getCtsDict(infodict, df, varlist):
 			infodict[m].update(dict(zip(["avg_" + str(v)], [wavg(selected_df, v)])))
 	# Return dict with msas and weighted hh avg
 	return infodict	
-
-#def getDiscreteDict(infodict, df, catvar, true_val):
-	#for m in infodict.keys(): 
-	#	selected_df = df[df['meteared']] == m]
-	#	infodict[m].update(dict(zip(["avg_" + str(var)], [wavg_catvar(selected_df, catvar)])))
-
 
 # Take a year and list of vars, get dict hh-weighted avgs by msa
 def weightedAvgByMSA(year, varlist_of_interest, varlist_of_necessity): 
@@ -99,11 +81,24 @@ def selectTenureHhtype(year, renter_status, house_type):
 	# Return dataframe
 	return famtype_ownership 
 
-
+# Given a dataframe and an empty dictionary of MSAs, compute the freq weight for each MSA
+def sumWeights(infodict, df, key): 
+	for m in infodict.keys(): 
+		selected = df[df['metaread'] == m]
+		weights = selected['hhwt']
+		infodict[m].update(dict(zip(['fweight_' + key], [weights.sum()])))
+	return infodict
+	
 
 '''
 Implement functions below
 '''
+'''
+Section I. The following script: 
+a. Extracts relevant variables from master IPUMS file
+b. Aggregates by household
+c. Computes averages of desired variables by MSA, sf/mf and renter/owner types.
+
 #Specify relevant variables to extract
 relevantvars = ['metaread',  # MSA 
 				'year', 		 # Year
@@ -139,18 +134,17 @@ dummies = ['living_with_other', 'living_alone', 'living_with_fam',
 cts = ['numprec', 'bedrooms', 'rent', 'hhincome', 
 		 'nfams', 'age']
 
-yearlist = [2007]
+yearlist = range(2009, 2012)
 #yearlist = range(2008, 2012)
 for year in yearlist: 
 # Get four dataframes, each containing hh-level obs for sf/mf and rental/owner types
 	print "Placing hh-level obs in separate sf/ mf owner/renter buckets for " + str(year)
 	sf_rental = selectTenureHhtype(year, 'rented', 'sf')
-#	mf_rental = selectTenureHhtype(year, 'rented', 'mf')
-#	sf_owned = selectTenureHhtype(year, 'owned', 'sf')
-#	mf_owned = selectTenureHhtype(year, 'owned', 'mf')
-	full = sf_rental
-#print sf_rental 	
-
+	mf_rental = selectTenureHhtype(year, 'rented', 'mf')
+	sf_owned = selectTenureHhtype(year, 'owned', 'sf')
+	mf_owned = selectTenureHhtype(year, 'owned', 'mf')
+	full = sf_owned.append(sf_rental, mf_rental, mf_owned)
+	
 
 # For each of the four of the data frames, compute weighted average of each variable by MSA
 	# First get all the MSAs present in the dataframe and initialize an empty dictionary with msas as keys
@@ -163,40 +157,16 @@ for year in yearlist:
 	varlist = dummies + cts				
 	print "	For sfrental"
 	stats_sfrental = getCtsDict(msadict, sf_rental, varlist) 
-#	print "	For sfowned"
-#	stats_sfowned = getCtsDict(msadict, sf_owned, varlist)
-#	print "	For mfrental"
-#	stats_mfrental = getCtsDict(msadict, mf_rental, varlist)
-#	print "	For mfowned"
-#	stats_mfowned = getCtsDict(msadict, mf_owned, varlist)
+	print "	For sfowned"
+	stats_sfowned = getCtsDict(msadict, sf_owned, varlist)
+	print "	For mfrental"
+	stats_mfrental = getCtsDict(msadict, mf_rental, varlist)
+	print "	For mfowned"
+	stats_mfowned = getCtsDict(msadict, mf_owned, varlist)
 	fieldnames = ['msa'] + [str(year)]	+ ["avg_" + str(v) for v in varlist]
-
-
-	# Compile the statistics matched to msa in an output dictionary for sf_rental ONLY
-	info = stats_sfrental
-	#print stats_full.index(info)
-	bname = 'sfrental'
-	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
-	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
-	output = []
-	for k in info: 
-		msa = dict(zip(['msa'], [k]))
-		msa.update(info[k])
-		output.append(msa)
-	# Write to a csv file	
-	print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
-	fname = "M:/IPUMS/hhdata/" + bname + str(year) + ".csv"
-	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
-	f_out.writerow(dict(zip(fieldnames, fieldnames)))
-	for l in output: 
-		f_out.writerow(l)
-'''
-	# Compile the statistics matched to msa in an output dictionary for sf_owned ONLY
 	info = stats_sfowned
-	#for info in stats_sfowned: 
-	#print stats_full.index(info)
-	bname = 'sfowned'
-	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
+
+	bname = 'sf_owned'
 	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
 	output = []
 	for k in info: 
@@ -209,61 +179,58 @@ for year in yearlist:
 	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
 	f_out.writerow(dict(zip(fieldnames, fieldnames)))
 	for l in output: 
-		f_out.writerow(l)		
-
-	# Compile the statistics matched to msa in an output dictionary for mf_rental ONLY
-	#for info in stats_mfrental: 
-	info = stats_mfrental
-	#print stats_full.index(info)
-	bname = 'mfrental'
-	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
-	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
-	output = []
-	for k in info: 
-		msa = dict(zip(['msa'], [k]))
-		msa.update(info[k])
-		output.append(msa)
-	# Write to a csv file	
-	print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
-	fname = "M:/IPUMS/hhdata/" + bname + str(year) + ".csv"
-	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
-	f_out.writerow(dict(zip(fieldnames, fieldnames)))
-	for l in output: 
-		f_out.writerow(l)	
-
-	# Compile the statistics matched to msa in an output dictionary for mf_owned ONLY
-	info = stats_mfowned
-	#for info in stats_mfowned: 
-	#print stats_full.index(info)
-	bname = 'mfowned'
-	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
-	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
-	output = []
-	for k in info: 
-		msa = dict(zip(['msa'], [k]))
-		msa.update(info[k])
-		output.append(msa)
-	# Write to a csv file	
-	print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
-	fname = "M:/IPUMS/hhdata/" + bname + str(year) + ".csv"
-	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
-	f_out.writerow(dict(zip(fieldnames, fieldnames)))
-	for l in output: 
-		f_out.writerow(l)	
-
-
-
-
-
-
-	
+		f_out.writerow(l) 
 '''
 
+'''
+Section II: 
+a. Retrieve frequency weights for each sf/mf and owner/renter bucket by MSA for each year
+b. Combine with appropriate spreadsheet 
+'''
+# For each year...
+yearlist = [2007] 
+for y in yearlist: 
+	# Extract each bucket into a dataframe
+	sf_rental = selectTenureHhtype(y, 'rented', 'sf')
+	mf_rental = selectTenureHhtype(y, 'rented', 'mf')
+	sf_owned = selectTenureHhtype(y, 'owned', 'sf')
+	mf_owned = selectTenureHhtype(y, 'owned', 'mf')
+	
+	# Get list of MSAs
+	full = sf_owned.append(sf_rental, mf_rental, mf_owned)
+	msas = full.groupby('metaread')
+	msadict = {x: {} for x in msas.groups}
+
+	# For each bucket (dataframe), get freq weight for all MSAs
+	sfrdict = sumWeights(msadict, sf_rental, 'sfr')
+	mfrdict = sumWeights(msadict, mf_rental, 'mfr')
+	sfodict = sumWeights(msadict, sf_owned, 'sfo')
+	mfodict = sumWeights(msadict, mf_owned, 'mfo')
+	sfrdict.update(mfrdict)
+	print sfrdict
+
+	# Attach freq weights by msa to appropriate yearly spreadsheet 
+	namestubs = {'sf_rental': 'sfr', 'mf_rental': 'mfr', 'sf_owned': 'sfo', 'mf_owned': 'mfo'}
+	fnames = ["M:/IPUMS/hhdata/"+n+str(y)+".csv" for n in namestubs.keys()]
+	new = ["M:/IPUMS/hhdata/"+n+str(y)+"_fwt.csv" for n in namestubs.keys()]
+	allnames = dict(zip(fnames, new))
+	for f in fnames: 
+		orig = csv.DictReader(open(f, 'rb'))
+		h = orig.fieldnames + ['fweight_' + namestubs[f]]	
+		outfile = allnames[f]
+		output = csv.DictWriter(open(outfile, 'wb'), fieldnames = h)
+		output.writerow(dict(zip(h,h)))
+		fwtype = namestubs.replace("_", "")
+		key = 'fweight_' + fwtype[0:2]	
+		outlist = []
+		for l in orig:
+			fweightinfo = sfrdict[l['msa']]
+			l.update({key: fweightinfo})
 
 
 '''
 Scratch code 
-
+'''
 
 #splitMasterIPUMS("M:/IPUMS/hhlevel_housingstress.csv", range(2007, 2012))
 #[selectRelevantVars(relevantvars, y) for y in range(2007, 2012)]
@@ -274,26 +241,3 @@ Scratch code
 #getValuesDict(datafr, ['year'])
 #weightedAvgByMSA(2008, ['year', 'serial'], ['year', 'hhwt', 'related', 'metaread'])	
 
-print "Aggregating statistics by MSA for all buckets for " + str(year)
-	 
-	stats_full = [stats_sfrental, stats_sfowned, stats_mfrental, stats_mfowned]
-	
-	for info in stats_full: 
-		print stats_full.index(info)
-		bname = dictnames[stats_full.index(info)].replace('stats_', "")
-		print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
-		output = []
-		for k in info: 
-			msa = dict(zip(['msa'], [k]))
-			msa.update(info[k])
-			output.append(msa)
-	# Write to a csv file	
-		print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
-		#fname = "M:/IPUMS/hhdata/" +str(year)+ '/agg_' + bname + '_' + str(year) + ".csv"
-		fname = "M:/IPUMS/hhdata/_" + bname + str(year) + ".csv"
-		f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
-		f_out.writerow(dict(zip(fieldnames, fieldnames)))
-		for l in output: 
-			f_out.writerow(l)
-
-'''
