@@ -1,3 +1,4 @@
+from __future__ import division
 import csv
 import pandas as pd 
 import matplotlib.pyplot as plt 
@@ -127,7 +128,8 @@ relevantvars = ['metaread',  # MSA
 # Write relevant vars at hh-level obs from master year files to a seperate file by year
 #[selectRelevantVars(relevantvars, y) for y in range(2006, 2012)]
 
-# Dummies to be aggregated (weighted average of dummies = share of population)
+# Dummies to be aggregated (weighted average of dummies = share of population matching that characteristic)
+# Think expected value
 dummies = ['living_with_other', 'living_alone', 'living_with_fam',
 			  'owned', 'rented', 'married', 'mortgage_status', 'white', 'black',
 				'nohs', 'hsgrad', 'college', 'postcoll', 'employed', 'not_in_lf', 'sf', 
@@ -137,48 +139,131 @@ dummies = ['living_with_other', 'living_alone', 'living_with_fam',
 cts = ['numprec', 'bedrooms', 'rent', 'hhincome', 
 		 'nfams', 'age']
 
-year = 2007
+yearlist = [2007]
+#yearlist = range(2008, 2012)
+for year in yearlist: 
 # Get four dataframes, each containing hh-level obs for sf/mf and rental/owner types
-sf_rental = selectTenureHhtype(year, 'rented', 'sf')
-mf_rental = selectTenureHhtype(year, 'rented', 'mf')
-sf_owned = selectTenureHhtype(year, 'owned', 'sf')
-mf_owned = selectTenureHhtype(year, 'owned', 'mf')
-	
+	print "Placing hh-level obs in separate sf/ mf owner/renter buckets for " + str(year)
+	sf_rental = selectTenureHhtype(year, 'rented', 'sf')
+#	mf_rental = selectTenureHhtype(year, 'rented', 'mf')
+#	sf_owned = selectTenureHhtype(year, 'owned', 'sf')
+#	mf_owned = selectTenureHhtype(year, 'owned', 'mf')
+	full = sf_rental
+#print sf_rental 	
+
+
 # For each of the four of the data frames, compute weighted average of each variable by MSA
-dfs = [sf_rental, mf_rental, sf_owned, mf_owned]
-dfnames = [1: 'sf_rental', 2: 'mf_rental', 3: 'sf_owned', 4: 'mf_owned'] 
-for df in dfs: 
 	# First get all the MSAs present in the dataframe and initialize an empty dictionary with msas as keys
-	msas = df.groupby('metaread')
-	msadict = {x: {} for x in msa.groups}
+	print "Getting MSAs present in all buckets for " + str(year)
+	msas = full.groupby('metaread')
+	msadict = {x: {} for x in msas.groups}
 	
 	# For each variable, compute the weighted average by msa and store in a dict with msas as keys
-	varlist = dummies + cts					
-	info = getCtsDict(msadict, df, varlist) 
+	print "Computing statistics of key vars in each bucket for " + str(year)
+	varlist = dummies + cts				
+	print "	For sfrental"
+	stats_sfrental = getCtsDict(msadict, sf_rental, varlist) 
+#	print "	For sfowned"
+#	stats_sfowned = getCtsDict(msadict, sf_owned, varlist)
+#	print "	For mfrental"
+#	stats_mfrental = getCtsDict(msadict, mf_rental, varlist)
+#	print "	For mfowned"
+#	stats_mfowned = getCtsDict(msadict, mf_owned, varlist)
+	fieldnames = ['msa'] + [str(year)]	+ ["avg_" + str(v) for v in varlist]
 
-	# Compile the statistics matched to msa in an output dictionary 
-	fieldnames = ['msa'] + [str(year)]	+ ["avg_" + str(v) for v in varlist] 
+
+	# Compile the statistics matched to msa in an output dictionary for sf_rental ONLY
+	info = stats_sfrental
+	#print stats_full.index(info)
+	bname = 'sfrental'
+	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
+	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
 	output = []
 	for k in info: 
 		msa = dict(zip(['msa'], [k]))
 		msa.update(info[k])
 		output.append(msa)
-
 	# Write to a csv file	
-	bname = dfnames[dfs.index(df)]
-	f_out = csv.DictWriter(open('M:/IPUMS/hhdata/'+str(year)+'agg_'+bname+'_'+str(year)+'.csv'), fieldnames = fieldnames, dialect = excel)
+	print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
+	fname = "M:/IPUMS/hhdata/" + bname + str(year) + ".csv"
+	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
 	f_out.writerow(dict(zip(fieldnames, fieldnames)))
 	for l in output: 
 		f_out.writerow(l)
+'''
+	# Compile the statistics matched to msa in an output dictionary for sf_owned ONLY
+	info = stats_sfowned
+	#for info in stats_sfowned: 
+	#print stats_full.index(info)
+	bname = 'sfowned'
+	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
+	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
+	output = []
+	for k in info: 
+		msa = dict(zip(['msa'], [k]))
+		msa.update(info[k])
+		output.append(msa)
+	# Write to a csv file	
+	print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
+	fname = "M:/IPUMS/hhdata/" + bname + str(year) + ".csv"
+	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
+	f_out.writerow(dict(zip(fieldnames, fieldnames)))
+	for l in output: 
+		f_out.writerow(l)		
+
+	# Compile the statistics matched to msa in an output dictionary for mf_rental ONLY
+	#for info in stats_mfrental: 
+	info = stats_mfrental
+	#print stats_full.index(info)
+	bname = 'mfrental'
+	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
+	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
+	output = []
+	for k in info: 
+		msa = dict(zip(['msa'], [k]))
+		msa.update(info[k])
+		output.append(msa)
+	# Write to a csv file	
+	print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
+	fname = "M:/IPUMS/hhdata/" + bname + str(year) + ".csv"
+	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
+	f_out.writerow(dict(zip(fieldnames, fieldnames)))
+	for l in output: 
+		f_out.writerow(l)	
+
+	# Compile the statistics matched to msa in an output dictionary for mf_owned ONLY
+	info = stats_mfowned
+	#for info in stats_mfowned: 
+	#print stats_full.index(info)
+	bname = 'mfowned'
+	#bname = dictnames[stats_full.index(info)].replace('stats_', "")
+	print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
+	output = []
+	for k in info: 
+		msa = dict(zip(['msa'], [k]))
+		msa.update(info[k])
+		output.append(msa)
+	# Write to a csv file	
+	print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
+	fname = "M:/IPUMS/hhdata/" + bname + str(year) + ".csv"
+	f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
+	f_out.writerow(dict(zip(fieldnames, fieldnames)))
+	for l in output: 
+		f_out.writerow(l)	
 
 
 
+
+
+
+	
+'''
 
 
 
 '''
 Scratch code 
-'''
+
 
 #splitMasterIPUMS("M:/IPUMS/hhlevel_housingstress.csv", range(2007, 2012))
 #[selectRelevantVars(relevantvars, y) for y in range(2007, 2012)]
@@ -188,3 +273,27 @@ Scratch code
 #weightedAvgByMSA('related', datafr, 'hhwt')	
 #getValuesDict(datafr, ['year'])
 #weightedAvgByMSA(2008, ['year', 'serial'], ['year', 'hhwt', 'related', 'metaread'])	
+
+print "Aggregating statistics by MSA for all buckets for " + str(year)
+	 
+	stats_full = [stats_sfrental, stats_sfowned, stats_mfrental, stats_mfowned]
+	
+	for info in stats_full: 
+		print stats_full.index(info)
+		bname = dictnames[stats_full.index(info)].replace('stats_', "")
+		print "Compiling stats in " + bname + " bucket into a single dict for " + str(year)
+		output = []
+		for k in info: 
+			msa = dict(zip(['msa'], [k]))
+			msa.update(info[k])
+			output.append(msa)
+	# Write to a csv file	
+		print "Writing info about " + bname + " bucket in " + str(year) + " to a csv file"
+		#fname = "M:/IPUMS/hhdata/" +str(year)+ '/agg_' + bname + '_' + str(year) + ".csv"
+		fname = "M:/IPUMS/hhdata/_" + bname + str(year) + ".csv"
+		f_out = csv.DictWriter(open(fname, "wb"), fieldnames = fieldnames)
+		f_out.writerow(dict(zip(fieldnames, fieldnames)))
+		for l in output: 
+			f_out.writerow(l)
+
+'''
