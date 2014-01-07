@@ -37,8 +37,8 @@ def selectRelevantVars(varnames, year):
 # Calculate the hh-weighted avg of a var in hhs within a select msa 
 def wavg(selected_df, var): 
 	# Special allowance for rented types: when calculating average rent, ignore "N/A" values
-	# 999999999999 is the code for "N/A"
-	selected_df = selected_df[selected_df[var] != 999999999999]
+	# 9999999 is the code for "N/A"
+	selected_df = selected_df[selected_df[var] < 9999999]
 	# Select column containing hh weights 
 	weight = selected_df['hhwt']
 	# Select column containing var of interest
@@ -88,7 +88,19 @@ def sumWeights(infodict, df, key):
 		weights = selected['hhwt']
 		infodict[m].update(dict(zip(['fweight_' + key], [weights.sum()])))
 	return infodict
-	
+
+def meanRent(infodict, df, key): 
+	for m in infodict.keys():
+		selected = df[df['metaread'] == m]
+		no_errors_only = selected[selected['rent'] < 9999999] 
+		weights = no_errors_only['hhwt']
+		data = no_errors_only['rent']
+		avg = (weights*data).sum()/ weights.sum()
+		infodict[m].update(dict(zip(['avgrent_'+ key], [avg])))
+	return infodict
+
+
+
 
 '''
 Implement functions below
@@ -187,19 +199,19 @@ Section II:
 a. Retrieve frequency weights for each sf/mf and owner/renter bucket by MSA for each year
 b. Combine with appropriate spreadsheet 
 '''
-# For each year...
-#yearlist = range(2007, 2012)
+
+
 yearlist = range(2007, 2012) 
 for y in yearlist: 
 	# Extract each bucket into a dataframe
 	sf_rental = selectTenureHhtype(y, 'rented', 'sf')
 	mf_rental = selectTenureHhtype(y, 'rented', 'mf')
-	sf_owned = selectTenureHhtype(y, 'owned', 'sf')
-	mf_owned = selectTenureHhtype(y, 'owned', 'mf')
+	#sf_owned = selectTenureHhtype(y, 'owned', 'sf')
+	#mf_owned = selectTenureHhtype(y, 'owned', 'mf')
 	print "Extracted buckets for year " + str(y)
 
 	# Get list of MSAs
-	full = sf_owned.append(sf_rental, mf_rental, mf_owned)
+	full = sf_rental.append(mf_rental)
 	msas = full.groupby('metaread')
 	msadict = {x: {} for x in msas.groups}
 	print "Compiled empty dict of MSAs in " + str(y)
@@ -207,16 +219,17 @@ for y in yearlist:
 	# For each bucket (dataframe), get freq weight for all MSAs
 	sfrdict = sumWeights(msadict, sf_rental, 'sfr')
 	mfrdict = sumWeights(msadict, mf_rental, 'mfr')
-	sfodict = sumWeights(msadict, sf_owned, 'sfo')
-	mfodict = sumWeights(msadict, mf_owned, 'mfo')
+#	sfodict = sumWeights(msadict, sf_owned, 'sfo')
+#	mfodict = sumWeights(msadict, mf_owned, 'mfo')
 	sfrdict.update(mfrdict)
 	print "Calculated freq weight sums by MSA for " + str(y)
 	#print sfrdict
 
 	# Attach freq weights by msa to appropriate yearly spreadsheet 
-	namestubs = {'sf_rental': 'sfr', 'mf_rental': 'mfr', 'sf_owned': 'sfo', 'mf_owned': 'mfo'}
-	fnames = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+".csv" for n in namestubs.keys()]))
-	new = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+"_fwt.csv" for n in namestubs.keys()]))
+#	namestubs = {'sf_rental': 'sfr', 'mf_rental': 'mfr', 'sf_owned': 'sfo', 'mf_owned': 'mfo'}
+	namestubs = {'sf_rental': 'sfr', 'mf_rental': 'mfr'}
+	fnames = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+"_rentavg.csv" for n in namestubs.keys()]))
+	new = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+"_fwt_rentavg.csv" for n in namestubs.keys()]))
 	for f in namestubs.keys(): 
 		print "Writing info for " + f + " in " + str(y)
 		orig = csv.DictReader(open(fnames[f], 'rb'))
@@ -230,6 +243,53 @@ for y in yearlist:
 			info = dict(zip(['fweight_' + namestubs[f]], [allfreqs[key]]))
 			l.update(info)
 			out.writerow(l)
+
+'''
+Section III. Fix rent variable to account for error code
+'''
+#yearlist = [2007]
+yearlist = range(2007, 2012) 
+for y in yearlist: 
+	# Extract each bucket into a dataframe
+	sf_rental = selectTenureHhtype(y, 'rented', 'sf')
+	mf_rental = selectTenureHhtype(y, 'rented', 'mf')
+	#sf_owned = selectTenureHhtype(y, 'owned', 'sf')
+	#mf_owned = selectTenureHhtype(y, 'owned', 'mf')
+	print "Extracted buckets for year " + str(y)
+
+	# Get list of MSAs
+	full = sf_rental.append(mf_rental)
+	msas = full.groupby('metaread')
+	msadict = {x: {} for x in msas.groups}
+	print "Compiled empty dict of MSAs in " + str(y)
+
+	# For each bucket, calculate mean rent for all MSAs
+	sfrdict = meanRent(msadict, sf_rental, 'sfr')
+	mfrdict = meanRent(msadict, mf_rental, 'mfr')
+	sfrdict.update(mfrdict)
+	print "Calculated mean rent for all buckets in " + str(y)
+
+	# Attach freq weights by msa to appropriate yearly spreadsheet 
+	namestubs = {'sf_rental': 'sfr', 'mf_rental': 'mfr'}
+	fnames = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+".csv" for n in namestubs.keys()]))
+	new = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+"_rentavg.csv" for n in namestubs.keys()]))
+	for f in namestubs.keys(): 
+		print "Writing info for " + f + " in " + str(y)
+		orig = csv.DictReader(open(fnames[f], 'rb'))
+		h = orig.fieldnames + ['avgrent_' + namestubs[f]]
+		out = csv.DictWriter(open(new[f], 'wb'), fieldnames = h)
+		out.writerow(dict(zip(h,h)))
+		key = 'avgrent_' + namestubs[f]
+		for l in orig: 
+			msa = l['msa']
+			allfreqs = sfrdict[msa]
+			info = dict(zip(['avgrent_' + namestubs[f]], [allfreqs[key]]))
+			l.update(info)
+			out.writerow(l)
+
+
+
+
 
 
 '''

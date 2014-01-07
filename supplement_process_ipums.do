@@ -2,13 +2,15 @@
 
 * Combine aggregated excel sheets by year
 local start = 2007 
-local typelist sf_rental mf_rental mf_owned sf_owned
+local typelist sf_rental mf_rental 
+*mf_owned sf_owned
 foreach n in `typelist' { 
 	forvalues y = `start'(1)2011 {	
-		insheet using "M:/IPUMS/hhdata/`n'`y'_fwt.csv", clear
+		insheet using "M:/IPUMS/hhdata/`n'`y'_fwt_rentavg.csv", clear
 		rename v2 year
 		replace year = `y'
-		export excel using "M:/IPUMS/hhdata/`n'_allyears_fwt.xls", sheet("`y'") sheetmodify nolabel firstrow(variables)
+		drop avg_rent
+		export excel using "M:/IPUMS/hhdata/`n'_allyears_fwt.xls", sheet("`y'") sheetreplace nolabel firstrow(variables)
 	}
 }
 /* Format selected categorical variables into dummies 
