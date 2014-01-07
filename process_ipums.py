@@ -188,18 +188,21 @@ a. Retrieve frequency weights for each sf/mf and owner/renter bucket by MSA for 
 b. Combine with appropriate spreadsheet 
 '''
 # For each year...
-yearlist = [2007] 
+#yearlist = range(2007, 2012)
+yearlist = range(2007, 2012) 
 for y in yearlist: 
 	# Extract each bucket into a dataframe
 	sf_rental = selectTenureHhtype(y, 'rented', 'sf')
 	mf_rental = selectTenureHhtype(y, 'rented', 'mf')
 	sf_owned = selectTenureHhtype(y, 'owned', 'sf')
 	mf_owned = selectTenureHhtype(y, 'owned', 'mf')
-	
+	print "Extracted buckets for year " + str(y)
+
 	# Get list of MSAs
 	full = sf_owned.append(sf_rental, mf_rental, mf_owned)
 	msas = full.groupby('metaread')
 	msadict = {x: {} for x in msas.groups}
+	print "Compiled empty dict of MSAs in " + str(y)
 
 	# For each bucket (dataframe), get freq weight for all MSAs
 	sfrdict = sumWeights(msadict, sf_rental, 'sfr')
@@ -207,25 +210,26 @@ for y in yearlist:
 	sfodict = sumWeights(msadict, sf_owned, 'sfo')
 	mfodict = sumWeights(msadict, mf_owned, 'mfo')
 	sfrdict.update(mfrdict)
-	print sfrdict
+	print "Calculated freq weight sums by MSA for " + str(y)
+	#print sfrdict
 
 	# Attach freq weights by msa to appropriate yearly spreadsheet 
 	namestubs = {'sf_rental': 'sfr', 'mf_rental': 'mfr', 'sf_owned': 'sfo', 'mf_owned': 'mfo'}
-	fnames = ["M:/IPUMS/hhdata/"+n+str(y)+".csv" for n in namestubs.keys()]
-	new = ["M:/IPUMS/hhdata/"+n+str(y)+"_fwt.csv" for n in namestubs.keys()]
-	allnames = dict(zip(fnames, new))
-	for f in fnames: 
-		orig = csv.DictReader(open(f, 'rb'))
-		h = orig.fieldnames + ['fweight_' + namestubs[f]]	
-		outfile = allnames[f]
-		output = csv.DictWriter(open(outfile, 'wb'), fieldnames = h)
-		output.writerow(dict(zip(h,h)))
-		fwtype = namestubs.replace("_", "")
-		key = 'fweight_' + fwtype[0:2]	
-		outlist = []
-		for l in orig:
-			fweightinfo = sfrdict[l['msa']]
-			l.update({key: fweightinfo})
+	fnames = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+".csv" for n in namestubs.keys()]))
+	new = dict(zip(namestubs.keys(), ["M:/IPUMS/hhdata/"+n+str(y)+"_fwt.csv" for n in namestubs.keys()]))
+	for f in namestubs.keys(): 
+		print "Writing info for " + f + " in " + str(y)
+		orig = csv.DictReader(open(fnames[f], 'rb'))
+		h = orig.fieldnames + ['fweight_' + namestubs[f]]
+		out = csv.DictWriter(open(new[f], 'wb'), fieldnames = h)
+		out.writerow(dict(zip(h,h)))
+		key = 'fweight_' + namestubs[f]
+		for l in orig: 
+			msa = l['msa']
+			allfreqs = sfrdict[msa]
+			info = dict(zip(['fweight_' + namestubs[f]], [allfreqs[key]]))
+			l.update(info)
+			out.writerow(l)
 
 
 '''

@@ -5,8 +5,10 @@ local start = 2007
 local typelist sf_rental mf_rental mf_owned sf_owned
 foreach n in `typelist' { 
 	forvalues y = `start'(1)2011 {	
-		insheet using "M:/IPUMS/hhdata/`n'`y'.csv", clear
-		export excel using "M:/IPUMS/hhdata/`n'_allyears.xls", sheet("`y'") sheetmodify nolabel firstrow(variables)
+		insheet using "M:/IPUMS/hhdata/`n'`y'_fwt.csv", clear
+		rename v2 year
+		replace year = `y'
+		export excel using "M:/IPUMS/hhdata/`n'_allyears_fwt.xls", sheet("`y'") sheetmodify nolabel firstrow(variables)
 	}
 }
 /* Format selected categorical variables into dummies 
