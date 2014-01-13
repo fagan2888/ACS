@@ -1,6 +1,6 @@
 /* This program supplements the python code in M:/IPUMS/hhdata/process_ipums.py */ 
 
-* Combine aggregated excel sheets by year
+/* Combine aggregated excel sheets by year
 local start = 2007 
 local typelist sf_rental mf_rental 
 *mf_owned sf_owned
@@ -12,8 +12,8 @@ foreach n in `typelist' {
 		drop avg_rent
 		export excel using "M:/IPUMS/hhdata/`n'_allyears_fwt.xls", sheet("`y'") sheetreplace nolabel firstrow(variables)
 	}
-}
-/* Format selected categorical variables into dummies 
+} */
+* Format selected categorical variables into dummies 
 forvalues y = 2007(1)2011 {
 	insheet using M:/IPUMS/hhdata/relevant_`y'.csv, names clear 
 	
@@ -87,4 +87,4 @@ forvalues y = 2007(1)2011 {
 	
 	* Outsheet
 	outsheet using M:/IPUMS/hhdata/hhrelevant_`y'.csv, comma replace
-	}	*/
+	}
