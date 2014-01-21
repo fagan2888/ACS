@@ -38,6 +38,34 @@ def addlAdult(group):
 	output['adults_sharing2'] = adults_sharing2['pernum'].count()
 	return output
 
+# Get the weighted count of a dummy variable in a dataframe
+def wcount(df, var, weight): 
+	data = df[var]
+	wt = df[weight]
+	count = (data*weight).sum()
+	return count
+
+# Get the weighted average of a variable in a dataframe
+def wavg(df, var, weight): 
+	# Special allowance for rented types: when calculating average rent, ignore "N/A" values
+	# 9999999 is the code for "N/A"
+	data = df[df[var] < 9999999] 
+ 	wt = df[weight]
+	avg = (data*weight).sum()/ weight.sum()
+	return avg
+
+# Take a dataframe, var, a new var name, and set of labels. Generate new variable. 
+
+
+# Recode categorical variables into dummies based on label names
+cat = []
+
+
+
+
+
+'''Implement functions below''' 
+''' 
 # Select the variables of interest 
 varnames =  ['metaread',  # MSA 
 				'year', 	 # Year
@@ -103,7 +131,7 @@ for y in years:
 			# Convert the info from dataframe format to a dict, and write to csv
 			o.writerow({k: (head_dict[k])[x] for k in head_dict for x in head_dict[k]})
 			#collect_dicts.append({k: (head_dict[k])[x] for k in head_dict for x in head_dict[k]})
-	
+''' 	
 
 
 
