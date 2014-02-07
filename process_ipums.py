@@ -248,7 +248,7 @@ for y in yearlist:
 Section III. Fix rent variable to account for error code
 '''
 #yearlist = [2007]
-yearlist = range(2007, 2012) 
+#yearlist = range(2007, 2012) 
 for y in yearlist: 
 	# Extract each bucket into a dataframe
 	sf_rental = selectTenureHhtype(y, 'rented', 'sf')
@@ -288,6 +288,7 @@ for y in yearlist:
 			out.writerow(l)
 
 
+#
 
 
 

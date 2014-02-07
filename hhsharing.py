@@ -83,10 +83,10 @@ def computeMsaAvg(df, varlist):
 	return output
 
 '''Implement functions below''' 
-''' 
+
 # Select the variables of interest 
 varnames =  ['metaread',  # MSA 
-				'year', 	 # Year
+				'year', 	 # Year 
 				'hhwt', 	 # Household weight
 				'relate',	 # Relationship to hh head
 				'hhtype',	 # HH type
@@ -114,8 +114,9 @@ varnames =  ['metaread',  # MSA
 				'famunit', 	 # Family unit
 				'schltype',	 # School enrollement/type 	
 				'related',   # Relationship to hh head w/ detail	
-				'pernum']    # Unique person id within family unit
-#print varnames
+				'pernum',	 # Unique person id within family unit
+				'sfrelate']  # Relationship within subfamily 
+print varnames
 
 # Read in variables of interest from csv to dataframe with correct column labels
 years = [2007] 
@@ -126,6 +127,26 @@ for y in years:
 	header = f.fieldnames 
 	cindices = [header.index(v) for v in varnames]
 	df = pd.read_csv(fname, usecols = cindices)
+
+	# Group dataframe by MSA 
+	msagr = df.groupby('metaread')
+
+		# Count number of total households within each MSA
+			# Get number of SFR, MFR, SFO, MFO 
+	
+		# Count number of hh with additional adult
+			# Get number of SFR, MFR, SFO, MFO 
+
+		# Count number of households with additional adult and a subfamily 
+			# Get number of SFR, MFR, SFO, MFO 
+
+		# Count the number of households with additional adult aged >= 35
+			# Get number of SFR, MFR, SFO, MFO 
+
+ 
+
+
+	''' 
 
 	# Group dataframe by household
 	dfgr = df.groupby('serial')
@@ -149,17 +170,18 @@ for y in years:
 			# Convert the info from dataframe format to a dict, and write to csv
 			o.writerow({k: (head_dict[k])[x] for k in head_dict for x in head_dict[k]})
 			#collect_dicts.append({k: (head_dict[k])[x] for k in head_dict for x in head_dict[k]})
-	
+	'''
+'''
 # Clean up yearly datasets (recode vars, etc) with stata code 
 dofile = r"M:\IPUMS\hhsharing_panel.do"
 cmd = ["stata", "do", dofile]
 dostata(dofile)
 '''
+'''
 #years = [2011]
 years = range(2007,2012)
 for y in years: 
-	# Read each cleaned file into a pandas dataframe 
-	#y = 2007 
+	# Read each cleaned file into a dataframe 
 	fname = "M:/IPUMS/hhdata/hhsharing/" + str(y) + "full.csv"
 	f = csv.DictReader(open(fname, 'rb'))
 	header = f.fieldnames 
@@ -180,5 +202,5 @@ for y in years:
 
  	df_msa_avg = pd.DataFrame(msa_avg)
  	df_msa_avg.to_csv("M:/IPUMS/hhdata/hhsharing/hhsharing_" + str(y) + ".csv", header = 'true') 
-
+'''
 
